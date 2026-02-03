@@ -37,8 +37,8 @@ class ExperimentAnalyzer:
         # Extract round statistics
         rounds = []
         round_pattern = r'\[Server\] Round (\d+)/(\d+)'
-        epsilon_pattern = r'Server ε: ([\d.]+)'
-        sparsity_pattern = r'Avg sparsity: ([\d.]+)%'
+        epsilon_pattern = r'Privacy: epsilon=([\d.]+)'
+        sparsity_pattern = r'Sparsity: ([\d.]+)%'
         loss_pattern = r'Loss: ([\d.]+)'
         accuracy_pattern = r'Accuracy: ([\d.]+)'
         
@@ -71,7 +71,7 @@ class ExperimentAnalyzer:
             rounds.append(round_data)
         
         # Extract final privacy budget
-        final_privacy_pattern = r'Final Privacy Budget: ε = ([\d.]+)'
+        final_privacy_pattern = r'Final Privacy Budget: epsilon = ([\d.]+)'
         final_privacy_match = re.search(final_privacy_pattern, content)
         final_epsilon = float(final_privacy_match.group(1)) if final_privacy_match else None
         
@@ -100,7 +100,7 @@ class ExperimentAnalyzer:
                 content = f.read()
             
             # Count training rounds
-            fit_pattern = r'\[Client \d+\] Starting fit for round (\d+)'
+            fit_pattern = r'\[Client \d+\] Round (\d+)'
             rounds_participated = len(re.findall(fit_pattern, content))
             
             # Extract privacy metrics
@@ -108,7 +108,7 @@ class ExperimentAnalyzer:
             epsilon_matches = re.findall(epsilon_pattern, content)
             
             # Extract compression metrics
-            compression_pattern = r'Compressing: keeping (\d+)/(\d+) \(([\d.]+)%\)'
+            compression_pattern = r'Compression: (\d+)/(\d+) params \(([\d.]+)%\)'
             compression_matches = re.findall(compression_pattern, content)
             
             client_data.append({
