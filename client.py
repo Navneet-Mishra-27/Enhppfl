@@ -14,6 +14,7 @@ Usage:
 
 import argparse
 import torch
+import hashlib
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Subset, TensorDataset
@@ -265,8 +266,14 @@ class EnhPPFLClient(fl.client.NumPyClient):
     
     def set_parameters(self, parameters: List[np.ndarray]):
         """Update model parameters from numpy arrays."""
-        params_dict = zip(self.model.state_dict().keys(), parameters)
-        state_dict = OrderedDict({k: torch.tensor(v) for k, v in params_dict})
+        current_state = self.model.state_dict()
+        params_dict = zip(current_state.keys(), parameters)
+        state_dict = OrderedDict(
+            {
+                k: torch.as_tensor(v, device=current_state[k].device, dtype=current_state[k].dtype)
+                for k, v in params_dict
+            }
+        )
         self.model.load_state_dict(state_dict, strict=True)
     
     def fit(
@@ -437,10 +444,11 @@ class EnhPPFLClient(fl.client.NumPyClient):
                 )
                 
                 if len(masked_values) > 0:
-                    mask_seed = shared_secret + str(self.current_round).encode()
-                    np.random.seed(int.from_bytes(mask_seed[:4], byteorder='big'))
-                    mask = torch.from_numpy(
-                        np.random.randn(len(masked_values)).astype(np.float32)
+                    seed_material = shared_secret + str(self.current_round).encode() + name.encode()
+                    seed = int.from_bytes(hashlib.sha256(seed_material).digest()[:8], byteorder='big')
+                    rng = np.random.default_rng(seed)
+                    mask = torch.from_numpy(    
+                        rng.standard_normal(len(masked_values)).astype(np.float32)
                     ).to(values.device)
                     
                     if self.client_id < peer_id:
